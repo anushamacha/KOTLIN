@@ -1,0 +1,68 @@
+import org.junit.Test
+import org.junit.Assert.*
+import org.mockito.Mockito.*
+import java.lang.Exception
+
+class SuggestionsFromCommandLineTest {
+
+    @Test
+    fun `should throw ContractException when suggestions is not a JSONObjectValue`() {
+        val suggestions = "invalid suggestions"
+        assertThrows(ContractException::class.java) {
+            suggestionsFromCommandLine(suggestions)
+        }
+    }
+
+    @Test
+    fun `should return empty list when exampleData list is empty`() {
+        val jsonObjectValue = mock(JSONObjectValue::class.java)
+        `when`(jsonObjectValue.jsonObject).thenReturn(emptyMap())
+
+        val result = suggestionsFromCommandLine(jsonObjectValue)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `should return list of scenarios when exampleData list is not empty`() {
+        val exampleDataList = listOf(
+            mock(JSONArrayValue::class.java),
+            mock(JSONArrayValue::class.java)
+        )
+        `when`(exampleDataList[0].list).thenReturn(listOf(mock(JSONObjectValue::class.java)))
+        `when`(exampleDataList[1].list).thenReturn(listOf(mock(JSONObjectValue::class.java), mock(JSONObjectValue::class.java)))
+
+        val jsonObjectValue = mock(JSONObjectValue::class.java)
+        `when`(jsonObjectValue.jsonObject).thenReturn(mapOf("scenario1" to exampleDataList[0], "scenario2" to exampleDataList[1]))
+
+        val result = suggestionsFromCommandLine(jsonObjectValue)
+
+        assertEquals(2, result.size)
+        assertEquals("scenario1", result[0].name)
+        assertEquals(1, result[0].examples.size)
+        assertEquals("scenario2", result[1].name)
+        assertEquals(2, result[1].examples.size)
+    }
+
+    @Test
+    fun `should throw ContractException when exampleData is not a JSONArrayValue`() {
+        val jsonObjectValue = mock(JSONObjectValue::class.java)
+        `when`(jsonObjectValue.jsonObject).thenReturn(mapOf("scenario" to mock(JSONObjectValue::class.java)))
+
+        assertThrows(ContractException::class.java) {
+            suggestionsFromCommandLine(jsonObjectValue)
+        }
+    }
+
+    @Test
+    fun `should throw Exception when row value is not a JSONObjectValue`() {
+        val jsonObjectValue = mock(JSONObjectValue::class.java)
+        `when`(jsonObjectValue.jsonObject).thenReturn(mapOf("scenario" to mock(JSONArrayValue::class.java)))
+        `when`((jsonObjectValue.jsonObject)["scenario"]).thenReturn(mock(JSONArrayValue::class.java))
+        `when`((jsonObjectValue.jsonObject)["scenario"]?.list).thenReturn(listOf(mock(PrimitiveValue::class.java)))
+
+        assertThrows(Exception::class.java) {
+            suggestionsFromCommandLine(jsonObjectValue)
+        }
+    }
+}
